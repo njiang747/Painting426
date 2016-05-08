@@ -1,0 +1,22 @@
+Results:
+
+Waterfall - Impressionism
+  /batch.html?Push_Image=waterfall.jpg&Paint=20;x8x4x2;1;0.5;1;1;4;16;0;0;0;0;0;0
+
+Pagoda - Impressionism
+ /batch.html?Push_Image=pagoda.jpg&Paint=30;x8x4x2;1;0.5;1;1;4;16;0;0;0;0;0;0
+
+Pagoda - Expressionism
+  /batch.html?Push_Image=pagoda.jpg&Paint=25;x8x4x2;0.5;0.5;0.5;1;10;16;0;0;0.3;0;0;0
+
+Pagoda - Impressionism/Expressionism
+ /batch.html?Push_Image=pagoda.jpg&Paint=27;x8x4x2;0.75;0.5;0.75;1;7;16;0;0;0.15;0;0;0 
+
+New York - Color Wash
+  /batch.html?Push_Image=newyork.jpg&Paint=60;x8x4x2;1;0.5;0.5;1;4;16;0;0;0;0.3;0.3;0.3
+
+Venice - Watercolor
+  /batch.html?Push_Image=venice.jpg&Paint=25;x8x4x2;0.8;0.7;0.1;1;4;10;0.1;0;0;0;0;0
+
+Tiger - Pointilism
+  /batch.html?Push_Image=tiger.jpg&Paint=100;x8x4x2;1;0.5;1;0.5;0;0;0.15;0;0.15;0;0;0
