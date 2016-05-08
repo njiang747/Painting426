@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title> COS426 Final Project &mdash; Painting &mdash; Interactive</title>
+    <link href="css/style.css" type="text/css" rel="stylesheet"/>
+</head>
+
+<body>
+    <script src="libjs/dat.gui.js"> </script>
+
+    <script src="libjs/gif/LZWEncoder.js"></script>
+    <script src="libjs/gif/NeuQuant.js"></script>
+    <script src="libjs/gif/GIFEncoder.js"></script>
+    <script src="libjs/gif/b64.js"></script>
+    
+    <script src="js/image.js"></script>
+    <script src="js/parser.js"></script>
+    <script src="js/filters.js"></script>
+
+    <script src="js/guiConfig.js"></script>
+    <script src="js/gui.js"></script>
+    <script>
+        Gui.hidden = false;
+    </script>
+    <!-- <script src="js/gui.js"></script> -->
+    <script src="js/student.js"> </script>
+    <script src="js/main.js"> </script>
+
+    
+    <div id="main_div">
+        <div id="error">Error: See Console</div>
+        <canvas id="canvas"> </canvas>
+        <div id="result_div" class="image" ></div>
+    </div>
+    <div id="alert_div" title="alert"> </div>
+    <div id="alert_div_internal" title="alert"> </div>
+</body>
+</html>
