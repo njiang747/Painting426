@@ -22,3 +22,6 @@ Venice - Watercolor
 
 Tiger - Pointilism
   /batch.html?Push_Image=tiger.jpg&Paint=100;x8x4x2;1;0.5;1;0.5;0;0;0.15;0;0.15;0;0;0
+
+Floating Mountain - Painting
+  /batch.html?Push_Image=floatingMountain.jpg&Paint=30;x4x2;0.8;0.8;0.5;0.6;4;16;0;0;0.05;0;0;0
