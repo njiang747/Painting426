@@ -10,11 +10,13 @@ GuiConfig.imageNames = [
   'tiger.jpg',
   'mountain.jpg',
   'mountainClouds.jpg',
+  'floatingMountain.jpg',
   'sunsetLake.jpg',
   'waterfall.jpg',
   'pagoda.jpg',
   'venice.jpg',
   'newyork.jpg',
+  'hongkong.jpg',
   'lamborghini.jpg',
 ];
 
