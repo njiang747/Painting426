@@ -16,7 +16,6 @@ GuiConfig.imageNames = [
   'venice.jpg',
   'newyork.jpg',
   'lamborghini.jpg',
-  'dota.jpg',
 ];
 
 var sampleDropdownOptions = ['point', 'bilinear', 'gaussian'];
