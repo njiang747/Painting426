@@ -16,7 +16,7 @@ GuiConfig.imageNames = [
   'pagoda.jpg',
   'venice.jpg',
   'newyork.jpg',
-  'hongKong.jpg',
+  'hongkong.jpg',
   'lamborghini.jpg',
 ];
 
