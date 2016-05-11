@@ -5,15 +5,18 @@ var GuiConfig = GuiConfig || {
 };
 
 GuiConfig.imageNames = [
-  'mountain.jpg',
   'blair.jpg',
   'nassau.jpg',
+  'tiger.jpg',
+  'mountain.jpg',
+  'mountainClouds.jpg',
+  'sunsetLake.jpg',
   'waterfall.jpg',
   'pagoda.jpg',
-  'newyork.jpg',
-  'tiger.jpg',
   'venice.jpg',
+  'newyork.jpg',
   'lamborghini.jpg',
+  'dota.jpg',
 ];
 
 var sampleDropdownOptions = ['point', 'bilinear', 'gaussian'];
@@ -42,30 +45,6 @@ GuiConfig.filterDefs = [
       },
     ]
   },
-  // disabled in favor of push + fill in order to simplify caching
-  // {
-  //   name: "Push Blank Image",
-  //   folderName: undefined,
-  //   notFilter: true,
-  //   pushImage: true,
-  //   paramDefs: [
-  //     {
-  //       name: "width",
-  //       defaultVal: 480,
-  //       isString: true,
-  //     },
-  //     {
-  //       name: "height",
-  //       defaultVal: 320,
-  //       isString: true,
-  //     },
-  //     {
-  //       name: "color",
-  //       defaultVal: [0, 0, 0],
-  //       isColor: true,
-  //     },
-  //   ]
-  // },
   {
     name: "Batch Mode",
     notFilter: true,
@@ -77,11 +56,22 @@ GuiConfig.filterDefs = [
     paramDefs: [
     ]
   },
+  {
+    name: "Animate Paint",
+    notFilter: true,
+    folderName: undefined,
+    applyFunc: function() {
+      // TODO put url stuff here
+      window.open("anim.html?" + Gui.getUrl());
+    },
+    paramDefs: [
+    ]
+  },
 
   {
     name: "Animation",
     notFilter: true,
-    folderName: undefined,
+    folderName: "Other",
     applyFunc: function() {
       var enableAnimation = true;
       window.open("batch.html?" + Gui.getUrl(enableAnimation));
@@ -93,7 +83,7 @@ GuiConfig.filterDefs = [
   {
     name: "MorphLines",
     notFilter: true,
-    folderName: undefined,
+    folderName: "Other",
     applyFunc: function() {
       // TODO put url stuff here
       var cache = Main.imageCache;
@@ -262,6 +252,20 @@ GuiConfig.filterDefs = [
   // FILTER OPERATIONS
   {
     name: "Gaussian",
+    folderName: "Other",
+    canAnimate: true,
+    paramDefs: [
+      {
+        name: "sigma",
+        defaultVal: 4,
+        sliderRange: [1, 8],
+        isFloat: false,
+      },
+    ]
+  },
+  {
+    name: "Fast Gaussian",
+    funcName: "fastGaussianFilter",
     folderName: "Other",
     canAnimate: true,
     paramDefs: [
@@ -623,7 +627,7 @@ GuiConfig.filterDefs = [
     ]
   },
   {
-    name: "Pointilism",
+    name: "Pointillism",
     funcName: "pointFilter",
     folderName: "Paint",
     canAnimate: false,
@@ -633,6 +637,14 @@ GuiConfig.filterDefs = [
   {
     name: "Watercolor",
     funcName: "watercolorFilter",
+    folderName: "Paint",
+    canAnimate: false,
+    paramDefs: [
+    ]
+  },
+  {
+    name: "Crazy",
+    funcName: "psychFilter",
     folderName: "Paint",
     canAnimate: false,
     paramDefs: [

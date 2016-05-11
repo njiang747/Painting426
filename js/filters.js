@@ -461,6 +461,67 @@ Filters.gaussianFilter = function( image, sigma ) {
   return newImg;
 };
 
+// fast Gaussian Algorithm from:
+// http://blog.ivank.net/fastest-gaussian-blur.html
+
+function boxesForGauss(sigma, n)
+{
+  var wIdeal = Math.sqrt((12*sigma*sigma/n)+1);
+  var wl = Math.floor(wIdeal);  if(wl%2==0) wl--;
+  var wu = wl+2;
+
+  var mIdeal = (12*sigma*sigma - n*wl*wl - 4*n*wl - 3*n)/(-4*wl - 4);
+  var m = Math.round(mIdeal);
+
+  var sizes = [];  for(var i=0; i<n; i++) sizes.push(i<m?wl:wu);
+  return sizes;
+}
+function boxBlur_3 (scl, tcl, w, h, r) {
+  for(var i=0; i<w; i++) {
+    for(var j = 0; j<h; j++) {
+      tcl.setPixel(i,j,scl.getPixel(i,j));
+    }
+  }
+  boxBlurH_3(tcl, scl, w, h, r);
+  boxBlurT_3(scl, tcl, w, h, r);
+}
+function boxBlurH_3 (scl, tcl, w, h, r) {
+  for(var i=0; i<h; i++) {
+    for(var j=0; j<w; j++)  {
+      var val = new Pixel(0,0,0);
+      for(var ix=j-r; ix<j+r+1; ix++) {
+        var x = Math.min(w-1, Math.max(0, ix));
+        val = val.plus(scl.getPixel(x,i));
+      }
+      tcl.setPixel(j,i,val.dividedBy(r+r+1));
+    }
+  }
+}   
+function boxBlurT_3 (scl, tcl, w, h, r) {
+  for(var i=0; i<h; i++) {
+    for(var j=0; j<w; j++) {
+      var val = new Pixel(0,0,0);
+      for(var iy=i-r; iy<i+r+1; iy++) {
+        var y = Math.min(h-1, Math.max(0, iy));
+        val = val.plus(scl.getPixel(j,y));
+      }
+      tcl.setPixel(j,i,val.dividedBy(r+r+1));
+    }
+  }
+}
+Filters.fastGaussianFilter = function ( image, sigma ) {
+  var w = image.width;
+  var h = image.height;
+  var newImg = image.createImg(w,h);
+  var winR = Math.ceil(sigma*2.57);
+
+  var bxs = boxesForGauss(sigma, 3);
+  boxBlur_3 (image, newImg, w, h, (bxs[0]-1)/2);
+  boxBlur_3 (newImg, image, w, h, (bxs[1]-1)/2);
+  boxBlur_3 (image, newImg, w, h, (bxs[2]-1)/2);
+  return newImg;
+}
+
 Filters.edgeFilter = function( image ) {
   // ----------- STUDENT CODE BEGIN ------------
   // ----------- Our reference solution uses 51 lines of code.
@@ -1141,37 +1202,6 @@ function pSquaredDist(pixel1, pixel2) {
   return sDist;
 }
 
-// paints a spattered circle of radius r at x,y on canvas based on blurImg
-function paintCircle(canvas, blurImg, x, y, r, zval, zbuf, color, A) {
-  var aColor = color.multipliedBy(A);
-  if (x < 0 || y < 0 || x > canvas.width - 1 || y > canvas.height - 1) return;
-  var radiusSquare = r * r;
-  // if (!color) color = blurImg.getPixel(x,y);
-  for (var dy = -r+1; dy < r; dy++) {
-    for (var dx = -r+1; dx < r; dx++) {
-      // if (Math.random()*(1-Math.sqrt(dx*dx+dy*dy)/r) > .05)
-      var ax = Math.floor(x + dx);
-      var ay = Math.floor(y + dy);
-      var cVal = 1-Math.sqrt(dx*dx+dy*dy)/r; // 1 at center, 0 at edge
-      if (ax >= 0 && ay >= 0 && ax < canvas.width && ay < canvas.height && 
-          zval > zbuf[ax][ay] && cVal > 0) {
-        // var A2 = A*Math.sqrt(cVal);
-        // var aColor = color.multipliedBy(A2);
-        zbuf[ax][ay] = zval;
-        if (A != 1) {
-          if (canvas.getPixel(ax,ay).a == 0) {
-            canvas.setPixel(ax, ay, color);
-          }
-          var oaColor = canvas.getPixel(ax,ay).multipliedBy(1-A);
-          canvas.setPixel(ax, ay, aColor.plus(oaColor));
-        } else {
-          canvas.setPixel(ax, ay, color);
-        }
-      }
-    }
-  }
-}
-
 // convolution masking at x,y window size d*d, mask provided by double array mask
 // d must be odd
 function convomask(image, x, y, d, mask) {
@@ -1251,13 +1281,13 @@ function avgDifference(canvas, difGrid, xpos, ypos, r) {
   var ux = Math.round(xpos + r/2);
   var uy = Math.round(ypos + r/2);
   var dMax = difGrid[ax][ay];
-  var coords = [ax, ay]
+  var coords = {x: ax, y: ay}
   for (var y = ly; y <= uy; y++) {
     for (var x = lx; x <= ux; x++) {
       if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
         if (difGrid[x][y] > dMax) {
           dMax = difGrid[x][y];
-          coords = [x,y]
+          coords = {x: x, y: y}
         }
         sum += difGrid[x][y];
         count++;
@@ -1368,7 +1398,62 @@ function renderStroke(canvas, blurImg, stroke, zval, zbuf) {
   }
 }
 
-function renderSplineStroke(canvas, blurImg, stroke, zval, zbuf, A) {
+// paints a colored circle of radius r at x,y on canvas based
+function paintCircle(canvas, blurImg, x, y, r, zval, zbuf, color, A) {
+  var aColor = color.multipliedBy(A);
+  if (x < 0 || y < 0 || x > canvas.width - 1 || y > canvas.height - 1) return;
+  var radiusSquare = r * r;
+  for (var dy = -r+1; dy < r; dy++) {
+    for (var dx = -r+1; dx < r; dx++) {
+      var ax = Math.floor(x + dx);
+      var ay = Math.floor(y + dy);
+      var cVal = 1-Math.sqrt(dx*dx+dy*dy)/r; // 1 at center, 0 at edge
+      if (ax >= 0 && ay >= 0 && ax < canvas.width && ay < canvas.height && 
+          zval > zbuf[ax][ay] && cVal > 0) {
+        zbuf[ax][ay] = zval;
+        if (A != 1) {
+          if (canvas.getPixel(ax,ay).a == 0) {
+            canvas.setPixel(ax, ay, color);
+          }
+          var oaColor = canvas.getPixel(ax,ay).multipliedBy(1-A);
+          canvas.setPixel(ax, ay, aColor.plus(oaColor));
+        } else {
+          canvas.setPixel(ax, ay, color);
+        }
+      }
+    }
+  }
+}
+
+// paints a stroke 
+function paintStroke(canvas, blurImg, x, y, r, zval, zbuf, color, A, g) {
+  var aColor = color.multipliedBy(A);
+  if (x < 0 || y < 0 || x > canvas.width - 1 || y > canvas.height - 1) return;
+  var radiusSquare = r * r;
+  for (var i = -r+1; i < r; i++) {
+    var dx = g.x*i;
+    var dy = g.y*i;
+    var ax = Math.floor(x + dx);
+    var ay = Math.floor(y + dy);
+    paintCircle(canvas, blurImg, ax, ay, r/2, zval, zbuf, new Pixel(0,0,0), A);
+
+    if (ax >= 0 && ay >= 0 && ax < canvas.width && ay < canvas.height && 
+        zval >= zbuf[ax][ay]) {
+      zbuf[ax][ay] = zval;
+      if (A != 1) {
+        if (canvas.getPixel(ax,ay).a == 0) {
+          canvas.setPixel(ax, ay, color);
+        }
+        var oaColor = canvas.getPixel(ax,ay).multipliedBy(1-A);
+        canvas.setPixel(ax, ay, aColor.plus(oaColor));
+      } else {
+        canvas.setPixel(ax, ay, color);
+      }
+    }
+  }
+}
+
+function renderSplineStroke(canvas, blurImg, stroke, zval, zbuf, A, bspl) {
   var color = stroke.color;
   var cPoints = stroke.cPoints;
   var r = stroke.r;
@@ -1376,11 +1461,19 @@ function renderSplineStroke(canvas, blurImg, stroke, zval, zbuf, A) {
     return
   } else if (cPoints.length == 1) {
     paintCircle(canvas, blurImg, cPoints[0].x, cPoints[0].y, r, zval, zbuf, color, A);
+
+    // var g = norm(0,0);
+    // paintStroke(canvas, blurImg, cPoints[0].x, cPoints[0].y, r, zval, zbuf, color, A, g);
   } else if (cPoints.length == 2) {
     for (var i = 0; i < 1; i+=1/r) {
       var ax = cPoints[0].x * (1-i) + cPoints[1].x * i;
       var ay = cPoints[0].y * (1-i) + cPoints[1].y * i;
       paintCircle(canvas, blurImg, ax, ay, r, zval, zbuf, color, A);
+
+      // var dx = cPoints[1].x - cPoints[0].x;
+      // var dy = cPoints[1].y - cPoints[0].y;
+      // var g = norm(dx,dy);
+      // paintStroke(canvas, blurImg, ax, ay, r, zval, zbuf, color, A, g);
     }
   } else if (cPoints.length == 3) {
     for (var j = 0; j < cPoints.length - 1; j++) {
@@ -1388,33 +1481,40 @@ function renderSplineStroke(canvas, blurImg, stroke, zval, zbuf, A) {
         var ax = cPoints[j].x * (1-i) + cPoints[j+1].x * i;
         var ay = cPoints[j].y * (1-i) + cPoints[j+1].y * i;
         paintCircle(canvas, blurImg, ax, ay, r, zval, zbuf, color, A);
+
+        // var dx = cPoints[j+1].x - cPoints[j].x;
+        // var dy = cPoints[j+1].y - cPoints[j].y;
+        // var g = norm(dx,dy);
+        // paintStroke(canvas, blurImg, ax, ay, r, zval, zbuf, color, A, g);
       }
     }
   } else {
-    var bspl = []
-    for (var i = 0; i <= r; i++) { 
-      var u = i/r;
-      bspl.push([((1-u)*(1-u)*(1-u))/6, 
-               (3*u*u*u - 6*u*u + 4)/6,
-               (-3*u*u*u + 3*u*u + 3*u + 1)/6,
-               (u*u*u)/6]);
-    }
     for (var j = 0; j < cPoints.length - 3; j++) {
       for (var i = 0; i <= r; i++) {
         var ax = 0;
         var ay = 0;
-        for (var z = 0; z < bspl[i].length; z++) {
-          ax += cPoints[j + z].x * bspl[i][z];
-          ay += cPoints[j + z].y * bspl[i][z];
+        for (var z = 0; z < bspl[0][i].length; z++) {
+          ax += cPoints[j + z].x * bspl[0][i][z];
+          ay += cPoints[j + z].y * bspl[0][i][z];
         }
         paintCircle(canvas, blurImg, ax, ay, r, zval, zbuf, color, A);
+        // var dx = 0;
+        // var dy = 0;
+        // for (var z = 0; z < bspl[0][i].length; z++) {
+        //   dx += cPoints[j + z].x * bspl[1][i][z];
+        //   dy += cPoints[j + z].y * bspl[1][i][z];
+        // }
+        // var g = norm(dx,dy);
+        // paintStroke(canvas, blurImg, ax, ay, r, zval, zbuf, color, A, g);
       }
     }
   }
 }
 
 // paints the current layer (based on r) onto canvas
-function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter) {
+function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter, bspl, animation) {
+  var start = new Date().getTime()/1000;
+
   var circles = [];
   var strokes = [];
   var zvals = []
@@ -1422,8 +1522,13 @@ function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter) {
   var difGrid = genDifGrid(canvas,blurImg);
   var grid = FG*r;
   var graGrid = genGraGrid(blurImg);
-  for (var y = 0; y < blurImg.height; y+=grid) {
-    for (var x = 0; x < blurImg.width; x+=grid) {
+
+  var current = new Date().getTime()/1000;
+  console.log(" - Layer Setup: %s seconds", (current - start).toFixed(2));
+  start = current;
+
+  for (var y = 0; y <= blurImg.height-1; y+=grid) {
+    for (var x = 0; x <= blurImg.width-1; x+=grid) {
       var avgDif = avgDifference(canvas,difGrid,x,y,grid);
       if (avgDif[0] > T) {
         // var s = makeStroke(r, x, y, blurImg);
@@ -1434,13 +1539,57 @@ function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter) {
     }
   }
 
-  for (var i = 0; i < strokes.length; i++) {
-    // renderStroke(canvas, blurImg, strokes[i], zvals[i], zbuf);
-    renderSplineStroke(canvas, blurImg, strokes[i], zvals[i], zbuf, A);
+  var current = new Date().getTime()/1000;
+  console.log(" - Make Strokes: %s seconds", (current - start).toFixed(2));
+  start = current;
+
+  if (animation) {
+    // shuffle(strokes);
+    var whiteCol = new Pixel(1,1,1);
+    var frames = 20;
+    var cap = Math.floor(strokes.length/frames);
+    var frameCounter = 0;
+    var counter = 0;
+    for (var i = 0; i < strokes.length; i++) {
+      counter++;
+      // renderStroke(canvas, blurImg, strokes[i], zvals[i], zbuf);
+      renderSplineStroke(canvas, blurImg, strokes[i], zvals[i], zbuf, A, bspl);
+
+      if (counter >= cap) {
+        counter = 0;
+        var temp = canvas.copyImg();
+        for (var x = 0; x < temp.width; x++) {
+          for (var y = 0; y < temp.height; y++) {
+            if (temp.getPixel(x,y).a == 0)
+              temp.setPixel(x,y,whiteCol);
+          }
+        }
+        frameCounter++;
+        Main.displayImage(temp,0,0,false);
+        Main.gifEncoder.addFrame( Main.canvas.getContext( '2d' ) );
+        if (frameCounter == frames) {
+          for (var a = 0; a < 6; a++) {
+            Main.gifEncoder.addFrame( Main.canvas.getContext( '2d' ) );
+          }
+        }
+      }
+    }
+  } else {
+    for (var i = 0; i < strokes.length; i++) {
+      renderSplineStroke(canvas, blurImg, strokes[i], zvals[i], zbuf, A, bspl);
+    }
   }
+
+  var current = new Date().getTime()/1000;
+  console.log(" - Render Strokes: %s seconds", (current - start).toFixed(2));
+  start = current;
 }
 
 Filters.paintFilter = function( image, thresh, brushSizes, fc, fs, a, fg, minl, maxl, jh, js, jv, jr, jg, jb) {
+  var start = new Date().getTime()/1000;
+  var animation = (document.getElementById( 'anim_div' ) != undefined);
+  console.log(animation);
+
   // constants
   var T = thresh;
   var FC = fc;
@@ -1464,15 +1613,44 @@ Filters.paintFilter = function( image, thresh, brushSizes, fc, fs, a, fg, minl, 
 
   // create the canvas 
   var canvas = image.createImg(image.width, image.height);
+  for (var a = 0; a < 6; a++) {
+    Main.displayImage(canvas,0,0,false);
+    Main.gifEncoder.addFrame( Main.canvas.getContext( '2d' ) );
+  }
   canvas.fill(new Pixel(0,0,0,0));
+
 
   // for each brush size
   for (var i = 0; i < brushes.length; i++) {
     var r = brushes[i];
+
+    // calculate the b-spline weights
+    var bspl = []
+    bspl.push([])
+    for (var j = 0; j <= r; j++) { 
+      var u = j/r;
+      bspl[0].push([((1-u)*(1-u)*(1-u))/6, 
+               (3*u*u*u - 6*u*u + 4)/6,
+               (-3*u*u*u + 3*u*u + 3*u + 1)/6,
+               (u*u*u)/6]);
+      // bspl[1].push([(-(u-1)*(u-1))/2, 
+      //          (3*u*u - 4*u)/2,
+      //          (-3*u*u + 2*u + 1)/2,
+      //          (u*u)/2]);
+    }
+
+    var start2 = new Date().getTime()/1000;
+    console.log (" - Blur size %s", (brushes[i]*FS).toFixed(2))
+
     // create the reference blur image
     var blurImg = Filters.gaussianFilter(image, brushes[i]*FS); 
+
+    var current2 = new Date().getTime()/1000;
+    console.log(" - Gaussian Blur: %s seconds", (current2 - start2).toFixed(2));
+    start2 = current2;
+
     // paint layer
-    paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter);
+    paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter, bspl, animation);
     if (i == 0) {
       for (var x = 0; x < canvas.width; x++) {
         for (var y = 0; y < canvas.height; y++) {
@@ -1482,6 +1660,25 @@ Filters.paintFilter = function( image, thresh, brushSizes, fc, fs, a, fg, minl, 
         }
       }
     }
+    var current = new Date().getTime()/1000;
+    console.log(" - Total: %s seconds", (current - start).toFixed(2));
+    start = current;
+  }
+
+  if (animation) {
+    for (var a = 0; a < 12; a++) {
+      Main.gifEncoder.addFrame( Main.canvas.getContext( '2d' ) );
+    }
+    Main.gifEncoder.finish();
+    var binaryGif = Main.gifEncoder.stream().getData();
+    var urlGif = 'data:image/gif;base64,' + encode64( binaryGif );
+    var resGif = document.createElement( 'img' );
+    resGif.src = urlGif;
+
+    document.getElementById( 'anim_div' ).style.display = "none";
+
+    var container = document.getElementById( 'result_div' );
+    container.appendChild( resGif );
   }
 
   return canvas;
@@ -1489,11 +1686,11 @@ Filters.paintFilter = function( image, thresh, brushSizes, fc, fs, a, fg, minl, 
 
 Filters.impressionFilter = function( image) {
   var brushes = "x8x4x2";
-  var T = 20;
+  var T = 25;
   var FC = 1;
   var FS = 0.5;
   var A = 1;
-  var FG = 1;
+  var FG = 0.8;
   var minL = 4;
   var maxL = 16;
   var jh = 0;
@@ -1517,7 +1714,7 @@ Filters.expressionFilter = function( image) {
   var maxL = 16;
   var jh = 0;
   var js = 0;
-  var jv = 0.3;//0.5
+  var jv = 0.4;//0.5
   var jr = 0;
   var jg = 0;
   var jb = 0;
@@ -1574,6 +1771,25 @@ Filters.watercolorFilter = function( image) {
   var maxL = 10;
   var jh = 0.1;
   var js = 0;
+  var jv = 0;
+  var jr = 0;
+  var jg = 0;
+  var jb = 0;
+  return Filters.paintFilter(image, T, brushes, FC, FS, A, FG, minL, maxL, 
+    jh, js, jv, jr, jg, jb);
+}
+
+Filters.psychFilter = function( image) {
+  var brushes = "x12x6x3";
+  var T = 80;
+  var FC = 0.3;
+  var FS = 0.5;
+  var A = 0.5;
+  var FG = 1;
+  var minL = 10;
+  var maxL = 16;
+  var jh = 0.8;
+  var js = 0.25;
   var jv = 0;
   var jr = 0;
   var jg = 0;

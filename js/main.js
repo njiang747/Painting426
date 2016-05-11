@@ -84,7 +84,7 @@ window.onload = function() {
   Main.gifEncoder = new GIFEncoder();
   Main.gifEncoder.setRepeat(0);
   //Main.gifEncoder.setQuality(20);
-  Main.gifEncoder.setDelay(0.05);
+  Main.gifEncoder.setDelay(1);
   Main.gifEncoder.start();
 
 
