@@ -47,17 +47,6 @@ GuiConfig.filterDefs = [
     ]
   },
   {
-    name: "Gallery",
-    notFilter: true,
-    folderName: undefined,
-    applyFunc: function() {
-      // TODO put url stuff here
-      window.open("gallery.html");
-    },
-    paramDefs: [
-    ]
-  },
-  {
     name: "Batch Mode",
     notFilter: true,
     folderName: undefined,
