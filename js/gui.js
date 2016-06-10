@@ -173,6 +173,34 @@ Gui.addHistoryEntry = function(filterDef, argVals) {
 
         paramControl.onChange(defaultOnChangeFunc);
       }
+      // else if (paramDef.isFile) {
+      //   paramControl = folder.add(filterInst.paramVals, paramDef.name)
+      //   var uploadControl = folder.add(filterInst.paramVals, 'loadFile').name('Load CSV file');
+
+      //   // var GuiCfg = function() {
+      //   //   var temp = this;
+      //   //   var input = document.getElementById('img-path');
+      //   //   input.addEventListener('change', function() {
+      //   //     var file = input.files[0];
+      //   //     temp['Image Path'] = file.name;
+
+      //   //     for (var i in Gui.historyDatGui.__controllers) {
+      //   //       Gui.historyDatGui.__controllers[i].updateDisplay();
+      //   //     }
+      //   //   });
+
+      //   //   this['Image Path'] = 'default.jpg';
+
+      //   //   this['Upload Image'] = function() {
+      //   //     input.click();
+      //   //   };
+      //   // };
+      //   // var config = new GuiCfg();
+      //   // this.historyDatGui.add(config, 'Image Path', config['Image Path']);
+      //   // this.historyDatGui.add(config, 'Upload Image');
+
+      //   paramControl.onChange(defaultOnChangeFunc);
+      // }
       else if (paramDef.dropdownOptions) {
         paramControl = folder.add(filterInst.paramVals, paramDef.name, paramDef.dropdownOptions);
         paramControl.onChange(defaultOnChangeFunc);
@@ -212,7 +240,7 @@ Gui.addHistoryEntry = function(filterDef, argVals) {
   }
 
   if (!Gui.hidden) {
-    if (filterDef.name === "Push Image") {
+    if (filterDef.name === "Push Image" || filterDef.name === "Load Image") {
       filterInst["Delete Below"] = function() {
         Gui.deleteHistoryBelow(filterInst);
         Gui.deleteHistoryEntry(filterInst);

@@ -133,3 +133,7 @@ button {
     background-image: linear-gradient(to bottom, #333, #222);
     filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#333, endColorstr=#222);
 }
+
+#img-path {
+    display: none;
+}

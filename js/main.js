@@ -1,5 +1,11 @@
 "use strict";
 
+var tempBaseImg = undefined;
+if (window.opener) {
+  tempBaseImg = window.opener.tempBaseImg;
+}
+var interactive = false; 
+
 // this construction helps avoid polluting the global name space
 var Main = Main || {
   // internal stuff
@@ -87,7 +93,6 @@ window.onload = function() {
   Main.gifEncoder.setDelay(1);
   Main.gifEncoder.start();
 
-
   Main.gifFrames = [];
 
   Main.canvas.addEventListener( "mousemove", function(event) {
@@ -110,6 +115,10 @@ window.onload = function() {
   Main.imagesToLoad = GuiConfig.imageNames.length;
   for (var i = 0; i < GuiConfig.imageNames.length; i++) {
     var imageName = GuiConfig.imageNames[i];
+    if (imageName == "-- Upload Image --") {
+      Main.imagesToLoad--;
+      continue;
+    }
     var image = document.createElement("img");
 
     // immediately called closure generating function
@@ -134,6 +143,36 @@ window.onload = function() {
     }; }(imageName, image);
 
     image.src = 'images/' + imageName;
+  }
+
+  interactive = (document.getElementById( 'img-path' ) != undefined);
+  if (interactive) {
+    var input = document.getElementById('img-path');
+    input.addEventListener('change', function() {
+      var file = input.files[0];
+      var image = document.createElement("img");
+      var imageObj = undefined;
+
+      // immediately called closure generating function
+      image.onload = function(imageName, image) { return function() {
+        Main.ctx.clearRect(0, 0, Main.canvas.width, Main.canvas.height);
+        Main.canvas.width = image.width;
+        Main.canvas.height = image.height;
+
+        Main.ctx.drawImage(image, 0, 0);
+        var imageData = Main.ctx.getImageData(0, 0, image.width, image.height);
+        Main.ctx.clearRect(0, 0, Main.canvas.width, Main.canvas.height);
+
+        imageObj = new Image(image.width, image.height, imageData.data, undefined, imageName);
+        Main.imageStack.pop();
+        Main.imageStack.push(imageObj.copyImg());
+        tempBaseImg = imageObj.copyImg();
+        Main.imageCache = [];
+        Main.applyFilters();
+      }; }(imageName, image);
+
+      image.src = URL.createObjectURL(file);
+    });
   }
 
   // initialize the gui with callbacks to handle gui changes
@@ -237,10 +276,26 @@ Main.applyFilters = function() {
 
           if (filterName === "Push Image") {
             imageName = data.argsList[0];
-
-            baseImage = Main.images[imageName];
-            assert(baseImage, "image not found (should be preloaded): " + imageName);
-            baseImage = baseImage.copyImg();
+            if (imageName == "-- Upload Image --") {
+              if (interactive) {
+                var input = document.getElementById('img-path');
+                input.style.display = "block";
+              }
+              if (tempBaseImg) {
+                baseImage = tempBaseImg;
+              } else {
+                Main.displayImageStack();
+                return
+              }
+            } else {
+              if (interactive) {
+                var input = document.getElementById('img-path');
+                input.style.display = "none";
+              }
+              baseImage = Main.images[imageName];
+              assert(baseImage, "image not found (should be preloaded): " + imageName);
+              baseImage = baseImage.copyImg();
+            }
           }
           else if (filterName === "Push Blank Image") {
             imageName = "Blank";
@@ -355,47 +410,6 @@ Main.applyFilters = function() {
   Gui.closeAlert("alert_div_internal");
 
   Main.displayImageStack();
-
-  // GIF Animation
-  // if (Gui.animationMode) {
-  //   // select the last history filter with one changeable parameter
-  //   for (var i = Gui.historyFilters.length-1; i >= 0; i--) {
-  //     var historyItemDef = Gui.historyFilters[i].filterDef;
-  //     var validParamIdx;
-  //     var nVaryingParameter = 0;
-  //     var valueRange = {};
-  //
-  //     for (var validParamIdx = 0; validParamIdx < historyItemDef.paramDefs.length; validParamIdx++) {
-  //       if (historyItemDef.paramDefs[validParamIdx].sliderRange) {
-  //         nVaryingParameter++;
-  //         valueRange = historyItemDef.paramDefs[validParamIdx].sliderRange;
-  //       }
-  //     }
-  //
-  //     if (nVaryingParameter == 1) {
-  //         if (Main.animatedValFound) {
-  //           break;
-  //         }
-  //
-  //         Main.animatedValFound = true;
-  //
-  //         var defaultOnChangeFunc = function(historyIdx) {
-  //           return function(val) {
-  //             Gui.historyFilters[historyIdx].argsList[0] = val;
-  //             Gui.handleControlsChange();
-  //           }
-  //         }(i)
-  //
-  //         Main.animatedValData = {
-  //           current: valueRange[0],
-  //           start: valueRange[0],
-  //           end: valueRange[1],
-  //           step: (valueRange[1] - valueRange[0]) / 10,
-  //           changeFunc: defaultOnChangeFunc,
-  //         };
-  //     }
-  //   }
-  // }
 
   if (Main.animatedValData) {
     Main.gifEncoder.addFrame( Main.canvas.getContext( '2d' ) );
