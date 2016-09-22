@@ -500,10 +500,17 @@ function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter, bspl, 
   start = current;
 
   if (animation) {
-    // shuffle(strokes);
+    // var test = r < 16;
+    // if (test) shuffle(strokes); // Comment out for top to bottom
     var whiteCol = new Pixel(1,1,1);
-    var frames = 20;
+    var frames = 16;
     var cap = Math.floor(strokes.length/frames);
+    // var denominator = 
+    //   test ? [128, 128, 64, 64, 64, 16, 8, 8, 8, 8, 8, 8, 8] : [24, 24, 24, 8, 8, 8, 8, 8, 8, 8];
+    // var cap_2 = [];
+    // for (var i = 0; i < denominator.length; i++) {
+    //   cap_2.push(Math.floor(strokes.length/denominator[i]));
+    // }
     var frameCounter = 0;
     var counter = 0;
     for (var i = 0; i < strokes.length; i++) {
@@ -511,6 +518,7 @@ function paintLayer(canvas, blurImg, r, FC, A, FG, T, minL, maxL, jitter, bspl, 
       // renderStroke(canvas, blurImg, strokes[i], zvals[i], zbuf);
       renderSplineStroke(canvas, blurImg, strokes[i], zvals[i], zbuf, A, bspl);
 
+      // if ((test && counter >= cap_2[frameCounter]) || (!test && counter >= cap)) {
       if (counter >= cap) {
         counter = 0;
         var temp = canvas.copyImg();
@@ -639,6 +647,14 @@ Filters.paintFilter = function( image, thresh, brushSizes, fc, fs, a, fg, minl, 
 
   return canvas;
 };
+
+// convert a canvas to an image
+// Code found at https://davidwalsh.name/convert-canvas-image
+function canvasToImage(canvas) {  
+  var image = new Image();
+  image.src = canvas.toDataURL("image/png");
+  return image;
+}
 
 Filters.impressionFilterHD = function( image) {
   var brushes = "x16x8x4";
